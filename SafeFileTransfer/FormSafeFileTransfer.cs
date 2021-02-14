@@ -13,6 +13,11 @@ namespace SafeFileTransferBackAndForth
             InitializeComponent();
         }
 
+        private void FormSafeFileTransfer_Load(object sender, EventArgs e)
+        {
+            this.textBoxCryptoKey.MaxLength = CryptoHelper.lengthOfInitializationVector + CryptoHelper.lengthOfKey;
+        }
+
         private void ButtonEncrypt_Click(object sender, EventArgs e)
         {
             try
@@ -39,7 +44,7 @@ namespace SafeFileTransferBackAndForth
                     byte[] compressedData = ZipHelper.ZipUp(streamSerialization, this.textBoxCryptoKey.Text);
                     streamSerialization.Close();
 
-                    byte[] encryptedData = CryptoHelper.Encrypt(compressedData, this.textBoxCryptoKey.Text.Substring(0, 8), this.textBoxCryptoKey.Text[CryptoHelper.lengthOfInitializationVector..]);
+                    byte[] encryptedData = CryptoHelper.Encrypt(compressedData, this.textBoxCryptoKey.Text.Substring(0, CryptoHelper.lengthOfInitializationVector), this.textBoxCryptoKey.Text[CryptoHelper.lengthOfInitializationVector..]);
 
                     this.textBoxEncryptedFileContent.Text = EncodingHelper.Encode(encryptedData);
                 }
@@ -60,7 +65,7 @@ namespace SafeFileTransferBackAndForth
 
                 byte[] encrodedData = EncodingHelper.Decode(this.textBoxEncryptedFileContent.Text);
 
-                var zippedData = CryptoHelper.Decrypt(encrodedData, this.textBoxCryptoKey.Text.Substring(0, 8), this.textBoxCryptoKey.Text[CryptoHelper.lengthOfInitializationVector..]);
+                var zippedData = CryptoHelper.Decrypt(encrodedData, this.textBoxCryptoKey.Text.Substring(0, CryptoHelper.lengthOfInitializationVector), this.textBoxCryptoKey.Text[CryptoHelper.lengthOfInitializationVector..]);
 
                 var serializedData = ZipHelper.UnZip(new MemoryStream(zippedData), this.textBoxCryptoKey.Text);
 
@@ -73,10 +78,11 @@ namespace SafeFileTransferBackAndForth
                 {
                     MessageBox.Show($"Error for file {fileEntry.FileName}: sizes do not match - expected={fileEntry.FileSize}, actual={fileEntry.FileContent.LongLength}");
                 }
-
-                if (this.folderBrowserDialog.ShowDialog() == DialogResult.OK)
+                else if (this.folderBrowserDialog.ShowDialog() == DialogResult.OK)
                 {
-                    File.WriteAllBytes(this.folderBrowserDialog.SelectedPath + Path.DirectorySeparatorChar + fileEntry.FileName, fileEntry.FileContent);
+                    string fileNameSaved = this.folderBrowserDialog.SelectedPath + Path.DirectorySeparatorChar + fileEntry.FileName;
+                    File.WriteAllBytes(fileNameSaved, fileEntry.FileContent);
+                    MessageBox.Show($"File saved: {fileNameSaved}");
                 }
             }
             finally
@@ -88,11 +94,6 @@ namespace SafeFileTransferBackAndForth
 
         private void TextBoxesCryptoKeys_TextChanged(object sender, EventArgs e) =>
             EnableEligibleButtons();
-
-        private void FormSafeFileTransfer_Load(object sender, EventArgs e)
-        {
-            this.textBoxCryptoKey.MaxLength = CryptoHelper.lengthOfInitializationVector + CryptoHelper.lengthOfTripleDesKey;
-        }
 
         private void EnableEligibleButtons()
         {
